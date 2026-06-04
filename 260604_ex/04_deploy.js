@@ -1,5 +1,5 @@
 // 의존성
-require("dotenv").config();
+require('dotenv').config();
 const express = require("express");
 const path = require("path");
 const { GoogleGenAI } = require("@google/genai");
@@ -8,7 +8,7 @@ const GroqAI = require("groq-sdk");
 // 전역변수
 const app = express();
 const { GEMINI_API_KEY, GROQ_API_KEY, PORT } = process.env;
-const genAI = new GoogleGenAI(GEMINI_API_KEY);
+const google = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 const groq = new GroqAI({ apiKey: GROQ_API_KEY });
 
 app.use(express.json());
@@ -19,8 +19,12 @@ app.use(express.static(path.join(__dirname, "public")));
 app.post("/chat", async (req, res) => {
   // 입력 (JSON)
   const { provider, model, ask } = req.body;
+  console.log("provider", provider);
+  console.log("model", model);
+  console.log("ask", ask);
   // 로직 (AI Provider)
   let result;
+  console.log("[서버 요청 시작]");
   switch (true) {
     case provider === "google":
       console.log("google 제공자 요청");
@@ -35,6 +39,7 @@ app.post("/chat", async (req, res) => {
       res.status(404).json({ msg: "존재하지 않는 Provider" });
       return;
   }
+  console.log("[서버 요청 완료]");
   // 출력 (JSON)
   res.json({
     result,
@@ -42,10 +47,11 @@ app.post("/chat", async (req, res) => {
 });
 
 async function useGoogle(model, ask) {
-  const modelInstance = genAI.getGenerativeModel({ model });
-  const result = await modelInstance.generateContent(ask);
-  const response = await result.response;
-  return response.text();
+  const response = await google.models.generateContent({
+    model, // 못 쓰는 모델은 예외처리될 예정
+    contents: ask,
+  });
+  return response.text;
 }
 
 async function useGroq(model, ask) {
