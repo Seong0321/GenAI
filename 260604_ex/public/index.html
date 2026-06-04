@@ -3,53 +3,618 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AI 챗봇</title>
+    <title>에테르 운세 (AetherFortune) - 오늘의 AI 운세</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Outfit:wght@300;400;600;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet" />
     <style>
-      #chatForm {
+      :root {
+        --bg-color: #0d0a1b;
+        --card-bg: rgba(22, 18, 41, 0.65);
+        --card-border: rgba(147, 112, 219, 0.2);
+        --text-primary: #f3f0ff;
+        --text-secondary: #aaa6c3;
+        --accent-gold: #ffd700;
+        --accent-purple: #9c27b0;
+        --accent-glow: #e040fb;
+        --font-main: 'Outfit', 'Noto Sans KR', sans-serif;
+        --font-fortune: 'Gowun Batang', serif;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        background: radial-gradient(circle at center, #1b163a 0%, #080612 100%);
+        color: var(--text-primary);
+        font-family: var(--font-main);
+        min-height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 20px;
+        overflow-x: hidden;
+      }
+
+      /* 별빛 효과 배경 */
+      .stars {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        background-image: 
+          radial-gradient(white, rgba(255,255,255,.2) 2px, transparent 40px),
+          radial-gradient(white, rgba(255,255,255,.15) 1px, transparent 30px),
+          radial-gradient(white, rgba(255,255,255,.1) 2px, transparent 40px);
+        background-size: 550px 550px, 350px 350px, 250px 250px;
+        background-position: 0 0, 40px 60px, 130px 270px;
+        opacity: 0.25;
+        z-index: -1;
+      }
+
+      .container {
+        width: 100%;
+        max-width: 580px;
+        z-index: 10;
+        perspective: 1000px;
+      }
+
+      .card {
+        background: var(--card-bg);
+        border: 1px solid var(--card-border);
+        border-radius: 24px;
+        padding: 40px 30px;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4), 0 0 40px rgba(138, 43, 226, 0.15);
+        backdrop-filter: blur(16px);
+        transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .card::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle, rgba(224, 64, 251, 0.08) 0%, transparent 60%);
+        pointer-events: none;
+      }
+
+      h1 {
+        text-align: center;
+        font-weight: 700;
+        letter-spacing: 1px;
+        margin-bottom: 8px;
+        background: linear-gradient(135deg, var(--text-primary) 30%, var(--accent-gold) 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-size: 1.8rem;
+      }
+
+      .subtitle {
+        text-align: center;
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+        margin-bottom: 35px;
+      }
+
+      form {
         display: flex;
         flex-direction: column;
+        gap: 20px;
+      }
+
+      .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      label {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      input, select {
+        width: 100%;
+        padding: 14px 18px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        color: var(--text-primary);
+        font-family: var(--font-main);
+        font-size: 0.95rem;
+        transition: all 0.3s;
+      }
+
+      input:focus, select:focus {
+        outline: none;
+        border-color: var(--accent-glow);
+        background: rgba(255, 255, 255, 0.07);
+        box-shadow: 0 0 15px rgba(224, 64, 251, 0.2);
+      }
+
+      .row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+      }
+
+      /* 버튼 스타일 */
+      button {
+        margin-top: 15px;
+        padding: 16px;
+        background: linear-gradient(135deg, #7b1fa2 0%, #4a148c 100%);
+        border: none;
+        border-radius: 14px;
+        color: white;
+        font-weight: 700;
+        font-size: 1.05rem;
+        cursor: pointer;
+        transition: all 0.3s;
+        box-shadow: 0 8px 20px rgba(74, 20, 140, 0.4);
+        position: relative;
+        overflow: hidden;
+      }
+
+      button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 25px rgba(123, 31, 162, 0.5), 0 0 15px rgba(224, 64, 251, 0.3);
+      }
+
+      button:active {
+        transform: translateY(1px);
+      }
+
+      /* 로딩 상태 */
+      .loader-container {
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 20px;
+        padding: 40px 0;
+      }
+
+      .spinner {
+        width: 60px;
+        height: 60px;
+        border: 3px solid rgba(224, 64, 251, 0.1);
+        border-radius: 50%;
+        border-top-color: var(--accent-gold);
+        border-bottom-color: var(--accent-glow);
+        animation: spin 1.5s linear infinite;
+        position: relative;
+      }
+
+      .spinner::after {
+        content: '';
+        position: absolute;
+        top: 6px;
+        left: 6px;
+        right: 6px;
+        bottom: 6px;
+        border: 3px solid transparent;
+        border-radius: 50%;
+        border-top-color: var(--text-primary);
+        animation: spin-reverse 1s linear infinite;
+      }
+
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+
+      @keyframes spin-reverse {
+        0% { transform: rotate(360deg); }
+        100% { transform: rotate(0deg); }
+      }
+
+      .loader-text {
+        font-size: 0.95rem;
+        color: var(--accent-gold);
+        animation: pulse 1.5s infinite ease-in-out;
+        min-height: 24px;
+        text-align: center;
+      }
+
+      @keyframes pulse {
+        0%, 100% { opacity: 0.6; }
+        50% { opacity: 1; }
+      }
+
+      /* 운세 결과 영역 */
+      .result-container {
+        display: none;
+        animation: fadeIn 0.8s ease forwards;
+      }
+
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      .score-circle-wrapper {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 25px;
+        position: relative;
+      }
+
+      .score-circle {
+        position: relative;
+        width: 140px;
+        height: 140px;
+      }
+
+      .score-circle svg {
+        width: 140px;
+        height: 140px;
+        transform: rotate(-90deg);
+      }
+
+      .score-circle circle {
+        fill: none;
+        stroke-width: 8;
+      }
+
+      .score-circle .bg-circle {
+        stroke: rgba(255, 255, 255, 0.05);
+      }
+
+      .score-circle .val-circle {
+        stroke: url(#goldGradient);
+        stroke-linecap: round;
+        stroke-dasharray: 414;
+        stroke-dashoffset: 414;
+        transition: stroke-dashoffset 1.5s ease-out;
+      }
+
+      .score-text {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .score-num {
+        font-size: 2.2rem;
+        font-weight: 800;
+        color: var(--accent-gold);
+      }
+
+      .score-lbl {
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+        margin-top: -4px;
+      }
+
+      .result-summary {
+        font-family: var(--font-fortune);
+        font-size: 1.35rem;
+        text-align: center;
+        margin-bottom: 25px;
+        color: var(--text-primary);
+        font-weight: 700;
+        line-height: 1.5;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        padding-bottom: 15px;
+      }
+
+      .result-detail {
+        font-family: var(--font-fortune);
+        font-size: 1.05rem;
+        line-height: 1.8;
+        color: #e2e0ed;
+        margin-bottom: 30px;
+        text-align: justify;
+        white-space: pre-line;
+      }
+
+      /* 행운 카드 섹션 */
+      .lucky-section {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
         gap: 12px;
-        align-items: start;
+        margin-bottom: 30px;
+      }
+
+      .lucky-card {
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 12px;
+        padding: 12px;
+        text-align: center;
+        transition: transform 0.3s;
+      }
+
+      .lucky-card:hover {
+        transform: scale(1.03);
+        background: rgba(255, 255, 255, 0.04);
+        border-color: rgba(224, 64, 251, 0.2);
+      }
+
+      .lucky-label {
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+        margin-bottom: 4px;
+      }
+
+      .lucky-value {
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: var(--text-primary);
+      }
+
+      .back-btn {
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: var(--text-primary);
+        box-shadow: none;
+      }
+
+      .back-btn:hover {
+        background: rgba(255, 255, 255, 0.12);
+        box-shadow: 0 4px 15px rgba(255, 255, 255, 0.05);
       }
     </style>
   </head>
   <body>
-    <form id="chatForm">
-      <select name="provider">
-        <option>google</option>
-        <option>groq</option>
-      </select>
-      <select name="model">
-        <option>gemma-4-26b-a4b-it</option>
-        <option>openai/gpt-oss-120b</option>
-      </select>
-      <input name="ask" />
-      <button>물어보기</button>
-    </form>
-    <section id="chatContainer"></section>
+    <div class="stars"></div>
+    <div class="container">
+      <div class="card">
+        <!-- 1단계: 정보 입력 화면 -->
+        <div id="inputFormContainer">
+          <h1>에테르 오늘의 운세</h1>
+          <p class="subtitle">AI가 사주와 별자리의 우주적 기운을 조합해 운세를 점쳐드립니다.</p>
+          
+          <form id="fortuneForm">
+            <div class="row">
+              <div class="form-group">
+                <label for="name">이름</label>
+                <input type="text" id="name" name="name" placeholder="홍길동" required />
+              </div>
+              <div class="form-group">
+                <label for="gender">성별</label>
+                <select id="gender" name="gender">
+                  <option value="남성">남성</option>
+                  <option value="여성">여성</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="form-group">
+                <label for="birthdate">생년월일</label>
+                <input type="date" id="birthdate" name="birthdate" required />
+              </div>
+              <div class="form-group">
+                <label for="birthtime">태어난 시간 (선택)</label>
+                <select id="birthtime" name="birthtime">
+                  <option value="">모름</option>
+                  <option value="子시 (23:30 ~ 01:29)">子시 (23:30 ~ 01:29)</option>
+                  <option value="丑시 (01:30 ~ 03:29)">丑시 (01:30 ~ 03:29)</option>
+                  <option value="寅시 (03:30 ~ 05:29)">寅시 (03:30 ~ 05:29)</option>
+                  <option value="卯시 (05:30 ~ 07:29)">卯시 (05:30 ~ 07:29)</option>
+                  <option value="辰시 (07:30 ~ 09:29)">辰시 (07:30 ~ 09:29)</option>
+                  <option value="巳시 (09:30 ~ 11:29)">巳시 (09:30 ~ 11:29)</option>
+                  <option value="午시 (11:30 ~ 13:29)">午시 (11:30 ~ 13:29)</option>
+                  <option value="未시 (13:30 ~ 15:29)">未시 (13:30 ~ 15:29)</option>
+                  <option value="申시 (15:30 ~ 17:29)">申시 (15:30 ~ 17:29)</option>
+                  <option value="酉시 (17:30 ~ 19:29)">酉시 (17:30 ~ 19:29)</option>
+                  <option value="戌시 (19:30 ~ 21:29)">戌시 (19:30 ~ 21:29)</option>
+                  <option value="亥시 (21:30 ~ 23:29)">亥시 (21:30 ~ 23:29)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="type">운세 테마</label>
+              <select id="type" name="type">
+                <option value="종합">종합 운세</option>
+                <option value="재물">재물과 번영</option>
+                <option value="연애">사랑과 만남</option>
+                <option value="성공">학업 및 직업 성취</option>
+                <option value="건강">신체 및 정신 건강</option>
+              </select>
+            </div>
+
+            <div class="row">
+              <div class="form-group">
+                <label for="provider">AI 제공자</label>
+                <select id="provider" name="provider">
+                  <option value="google">Google Gemini</option>
+                  <option value="groq">Groq AI</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="model">AI 모델</label>
+                <select id="model" name="model">
+                  <option value="gemini-2.5-flash">gemini-2.5-flash</option>
+                  <option value="gemini-1.5-flash">gemini-1.5-flash</option>
+                </select>
+              </div>
+            </div>
+
+            <button type="submit">나의 운세 풀이하기</button>
+          </form>
+        </div>
+
+        <!-- 2단계: 신비로운 로딩 화면 -->
+        <div id="loaderContainer" class="loader-container">
+          <div class="spinner"></div>
+          <div class="loader-text" id="loaderText">은하수의 정렬을 파악하는 중...</div>
+        </div>
+
+        <!-- 3단계: 운세 결과 화면 -->
+        <div id="resultContainer" class="result-container">
+          <h1 id="resultTitle">홍길동님의 운세</h1>
+          <p class="subtitle" style="margin-bottom: 20px;">우주가 전하는 오늘 하루의 메시지</p>
+
+          <div class="score-circle-wrapper">
+            <div class="score-circle">
+              <svg>
+                <defs>
+                  <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#ffd700" />
+                    <stop offset="100%" stop-color="#ff8a00" />
+                  </linearGradient>
+                </defs>
+                <circle class="bg-circle" cx="70" cy="70" r="66" />
+                <circle class="val-circle" id="valCircle" cx="70" cy="70" r="66" />
+              </svg>
+              <div class="score-text">
+                <span class="score-num" id="scoreNum">0</span>
+                <span class="score-lbl">기운 지수</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="result-summary" id="resultSummary">
+            "우주의 기운이 당신을 비추고 있습니다."
+          </div>
+
+          <div class="result-detail" id="resultDetail">
+            운세 풀이가 로드되고 있습니다...
+          </div>
+
+          <div class="lucky-section">
+            <div class="lucky-card">
+              <div class="lucky-label">행운의 아이템</div>
+              <div class="lucky-value" id="luckyItem">-</div>
+            </div>
+            <div class="lucky-card">
+              <div class="lucky-label">행운의 색상</div>
+              <div class="lucky-value" id="luckyColor">-</div>
+            </div>
+            <div class="lucky-card">
+              <div class="lucky-label">행운의 숫자</div>
+              <div class="lucky-value" id="luckyNumber">-</div>
+            </div>
+            <div class="lucky-card">
+              <div class="lucky-label">행운의 방향</div>
+              <div class="lucky-value" id="luckyDirection">-</div>
+            </div>
+          </div>
+
+          <button class="back-btn" onclick="showInputForm()">다시 확인하기</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Axios -->
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <script>
-      const chatForm = document.querySelector("#chatForm");
-      const chatContainer = document.querySelector("#chatContainer");
-      chatForm.addEventListener("submit", async (event) => {
-        event.preventDefault();
-        const formData = new FormData(event.target);
-        console.log("formData", ...formData);
-        console.log("[클라이언트 요청 시작]");
-        const response = await axios.post(
-          "/chat",
-          Object.fromEntries(formData),
-        );
-        console.log("[클라이언트 요청 완료]");
-        // console.log("response", response.data);
-        const { result } = response.data;
-        const p = document.createElement("p");
-        p.innerHTML = `
-            <strong>질문</strong> : ${formData.get("ask")}<br>
-            <strong>대답</strong> : ${result}
-        `;
-        chatContainer.append(p);
+      const providerSelect = document.getElementById('provider');
+      const modelSelect = document.getElementById('model');
+
+      // AI Provider가 바뀌면 모델 프리셋을 변경
+      providerSelect.addEventListener('change', () => {
+        modelSelect.innerHTML = '';
+        if (providerSelect.value === 'google') {
+          modelSelect.innerHTML = `
+            <option value="gemini-2.5-flash">gemini-2.5-flash</option>
+            <option value="gemini-1.5-flash">gemini-1.5-flash</option>
+          `;
+        } else if (providerSelect.value === 'groq') {
+          modelSelect.innerHTML = `
+            <option value="llama-3.3-70b-versatile">llama-3.3-70b</option>
+            <option value="mixtral-8x7b-32768">mixtral-8x7b</option>
+          `;
+        }
       });
+
+      const loadingPhrases = [
+        "별자리의 궤도를 정렬하고 있습니다...",
+        "사주 오행의 흐름을 분석하는 중...",
+        "오늘 하루 우주의 에너지를 매핑 중...",
+        "수호성의 기운을 감지하고 있습니다...",
+        "운명의 흐름을 텍스트로 정제 중..."
+      ];
+
+      let loadingInterval;
+
+      function startLoadingText() {
+        const loaderText = document.getElementById('loaderText');
+        let idx = 0;
+        loaderText.textContent = loadingPhrases[idx];
+        loadingInterval = setInterval(() => {
+          idx = (idx + 1) % loadingPhrases.length;
+          loaderText.textContent = loadingPhrases[idx];
+        }, 2200);
+      }
+
+      function stopLoadingText() {
+        clearInterval(loadingInterval);
+      }
+
+      const form = document.getElementById('fortuneForm');
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        // 폼 비활성화 및 로딩 보이기
+        document.getElementById('inputFormContainer').style.display = 'none';
+        document.getElementById('loaderContainer').style.display = 'flex';
+        startLoadingText();
+
+        const formData = new FormData(form);
+        const data = Object.fromEntries(formData);
+
+        try {
+          const response = await axios.post('/api/fortune', data);
+          const result = response.data;
+          
+          stopLoadingText();
+          document.getElementById('loaderContainer').style.display = 'none';
+          document.getElementById('resultContainer').style.display = 'block';
+
+          // 결과 적용
+          document.getElementById('resultTitle').textContent = `${data.name}님의 운세`;
+          document.getElementById('resultSummary').textContent = `"${result.summary}"`;
+          document.getElementById('resultDetail').textContent = result.detail;
+          
+          document.getElementById('luckyItem').textContent = result.luckyItem || '-';
+          document.getElementById('luckyColor').textContent = result.luckyColor || '-';
+          document.getElementById('luckyNumber').textContent = result.luckyNumber || '-';
+          document.getElementById('luckyDirection').textContent = result.luckyDirection || '-';
+
+          // 기운 지수 서클 애니메이션
+          const score = result.score || 50;
+          document.getElementById('scoreNum').textContent = score;
+          
+          // SVG dashoffset 계산 (dasharray 414 기준)
+          // 414 = 2 * PI * r (r=66 -> 2 * 3.14159 * 66 = 414.69)
+          const circleOffset = 414 - (414 * score) / 100;
+          setTimeout(() => {
+            document.getElementById('valCircle').style.strokeDashoffset = circleOffset;
+          }, 150);
+
+        } catch (error) {
+          stopLoadingText();
+          document.getElementById('loaderContainer').style.display = 'none';
+          alert(error.response?.data?.error || "운세를 풀이하는 데 실패했습니다. 다시 시도해 주세요.");
+          showInputForm();
+        }
+      });
+
+      function showInputForm() {
+        document.getElementById('resultContainer').style.display = 'none';
+        document.getElementById('loaderContainer').style.display = 'none';
+        document.getElementById('inputFormContainer').style.display = 'block';
+        document.getElementById('valCircle').style.strokeDashoffset = 414; // 리셋
+      }
     </script>
   </body>
 </html>
